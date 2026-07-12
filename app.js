@@ -1,8 +1,8 @@
 // Radio Browser API servers (tried in order as fallback)
 const RADIO_SERVERS = [
+  'https://all.api.radio-browser.info',  // official round-robin DNS — always routes to a live server
   'https://de1.api.radio-browser.info',
   'https://nl1.api.radio-browser.info',
-  'https://fr1.api.radio-browser.info',
 ];
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
@@ -74,9 +74,10 @@ async function getStations(countryCode) {
 }
 
 // ── Geocoding ────────────────────────────────────────────────────────────────
+// Using BigDataCloud — free, no API key, built for browser use (no User-Agent restrictions like Nominatim)
 async function reverseGeocode(lat, lng) {
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}`
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&localityLanguage=en`
   );
   return r.json();
 }
@@ -153,8 +154,8 @@ tuneBtn.addEventListener('click', async () => {
 
   try {
     const geo = await reverseGeocode(lat, lng);
-    const cc      = geo.address?.country_code?.toUpperCase();
-    const country = geo.address?.country;
+    const cc      = geo.countryCode?.toUpperCase();
+    const country = geo.countryName;
 
     if (!cc) {
       openPlayer("You're over the ocean! 🌊", '🌊');
