@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Globe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="globe-container"></div>
+
+  <div id="ui">
+    <header id="header">
+      <div class="logo">RADIO<span>GLOBE</span></div>
+      <p class="tagline">spin · stop · tune</p>
+    </header>
+
+    <div id="ci">
+      <div class="ci-ring outer"></div>
+      <div class="ci-ring inner"></div>
+      <div class="ci-dot"></div>
+    </div>
+
+    <div id="bottom">
+      <div id="player" class="hidden">
+        <div class="player-header">
+          <div id="location">
+            <span id="flag">🌍</span>
+            <span id="country">Loading...</span>
+          </div>
+          <button id="close-btn">✕</button>
+        </div>
+        <div id="station-name">Scanning frequencies...</div>
+        <div id="tags"></div>
+        <div id="visualizer"></div>
+        <div id="controls">
+          <button class="ctrl" id="prev">⏮</button>
+          <button class="ctrl main" id="playpause">⏸</button>
+          <button class="ctrl" id="next">⏭</button>
+        </div>
+        <div id="count"></div>
+      </div>
+
+      <div id="actions">
+        <button class="btn" id="spin-btn">⟳ SPIN</button>
+        <button class="btn primary" id="tune-btn">📻 TUNE IN</button>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" preload="none"></audio>
+
+  <script src="https://unpkg.com/globe.gl"></script>
+  <script src="app.js"></script>
+</body>
+</html>
