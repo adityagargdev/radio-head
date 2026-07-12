@@ -65,3 +65,5 @@ python -m http.server 8080
 |------|--------|
 | 2026-07-12 | Project initialized — globe, SPIN/TUNE IN, radio player, geocoding all working |
 | 2026-07-12 | Added `is_https=true` to Radio Browser query — eliminates HTTP stream mixed-content failures |
+| 2026-07-13 | Fixed geocoding: Nominatim → BigDataCloud (Nominatim blocks browser requests without custom User-Agent) |
+| 2026-07-13 | Fixed Radio Browser API param: `countrycodeExact` (invalid, ignored by API) → `countrycode` |

@@ -22,10 +22,7 @@ body {
 }
 
 /* ── Globe ─────────────────────────────────────── */
-#globe-container {
-  position: fixed;
-  inset: 0;
-}
+#globe-container { position: fixed; inset: 0; }
 
 /* ── UI overlay ─────────────────────────────────── */
 #ui {
@@ -38,17 +35,9 @@ body {
 }
 
 /* ── Header ─────────────────────────────────────── */
-#header {
-  padding: 1.5rem 1.75rem;
-  pointer-events: auto;
-}
+#header { padding: 1.5rem 1.75rem; pointer-events: auto; }
 
-.logo {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
+.logo { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.12em; }
 .logo span { color: var(--accent); }
 
 .tagline {
@@ -60,11 +49,7 @@ body {
 }
 
 /* ── Center indicator ───────────────────────────── */
-#ci {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-}
+#ci { position: absolute; top: 50%; left: 50%; }
 
 .ci-ring, .ci-dot {
   position: absolute;
@@ -74,27 +59,13 @@ body {
   border-radius: 50%;
 }
 
-.ci-ring {
-  border: 1px solid var(--accent);
-}
-
+.ci-ring { border: 1px solid var(--accent); }
 .ci-ring.outer { width: 30px; height: 30px; opacity: 0.35; }
 .ci-ring.inner { width: 15px; height: 15px; opacity: 0.6; }
+.ci-dot { width: 5px; height: 5px; background: var(--accent); }
 
-.ci-dot {
-  width: 5px;
-  height: 5px;
-  background: var(--accent);
-}
-
-#ci.tuned .ci-ring.outer {
-  animation: ripple 2s ease-out infinite;
-}
-
-#ci.tuned .ci-dot {
-  background: var(--live);
-  box-shadow: 0 0 8px var(--live);
-}
+#ci.tuned .ci-ring.outer { animation: ripple 2s ease-out infinite; }
+#ci.tuned .ci-dot { background: var(--live); box-shadow: 0 0 8px var(--live); }
 
 @keyframes ripple {
   from { transform: translate(-50%, -50%) scale(1); opacity: 0.35; }
@@ -141,12 +112,7 @@ body {
   margin-bottom: 1rem;
 }
 
-#location {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+#location { display: flex; align-items: center; gap: 0.5rem; }
 #flag { font-size: 1.2rem; }
 
 #country {
@@ -166,50 +132,68 @@ body {
   padding: 0.2rem 0.4rem;
   transition: color 0.2s;
 }
-
 #close-btn:hover { color: var(--text); }
 
-#station-name {
-  font-size: 0.95rem;
+/* ── Track row ──────────────────────────────────── */
+#track-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+#album-art {
+  width: 54px;
+  height: 54px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+#track-info { min-width: 0; flex: 1; }
+
+#track-name {
+  font-size: 0.9rem;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
-#tags {
-  font-size: 0.58rem;
+#artist-name {
+  font-size: 0.68rem;
   color: var(--dim);
-  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.3rem;
+}
+
+#preview-badge {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin-bottom: 1rem;
-  min-height: 0.8rem;
+  color: var(--accent);
+  opacity: 0.65;
 }
 
-/* ── Visualizer ─────────────────────────────────── */
-#visualizer {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 32px;
+/* ── Progress bar ───────────────────────────────── */
+#progress-wrap {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
   margin-bottom: 1rem;
+  overflow: hidden;
 }
 
-.bar {
-  flex: 1;
+#progress-bar {
+  height: 100%;
+  width: 0%;
   background: var(--accent);
-  border-radius: 2px 2px 0 0;
-  height: 4px;
-}
-
-#player.playing .bar {
-  animation: eq 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes eq {
-  from { height: 4px; }
-  to   { height: 30px; }
+  border-radius: 1px;
+  transition: width 0.5s linear;
 }
 
 /* ── Player controls ────────────────────────────── */
@@ -237,10 +221,7 @@ body {
   transition: all 0.2s;
 }
 
-.ctrl:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.ctrl:hover { border-color: var(--accent); color: var(--accent); }
 
 .ctrl.main {
   width: 54px;
@@ -251,10 +232,7 @@ body {
   background: rgba(0, 212, 255, 0.08);
 }
 
-.ctrl.main:hover {
-  background: var(--accent);
-  color: var(--bg);
-}
+.ctrl.main:hover { background: var(--accent); color: var(--bg); }
 
 #count {
   text-align: center;
@@ -264,11 +242,7 @@ body {
 }
 
 /* ── Action buttons ─────────────────────────────── */
-#actions {
-  display: flex;
-  gap: 0.75rem;
-  pointer-events: auto;
-}
+#actions { display: flex; gap: 0.75rem; pointer-events: auto; }
 
 .btn {
   flex: 1;
@@ -286,10 +260,7 @@ body {
   transition: all 0.2s;
 }
 
-.btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .btn.primary {
   background: rgba(0, 212, 255, 0.1);
@@ -297,20 +268,76 @@ body {
   color: var(--accent);
 }
 
-.btn.primary:hover {
-  background: rgba(0, 212, 255, 0.2);
-  border-color: var(--accent);
-}
+.btn.primary:hover { background: rgba(0, 212, 255, 0.2); border-color: var(--accent); }
 
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.35; }
 }
-
 .scanning { animation: blink 1.2s ease-in-out infinite; }
+
+/* ── Login overlay ──────────────────────────────── */
+#login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 6, 20, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#login-overlay.hidden { display: none; }
+
+#login-card {
+  text-align: center;
+  padding: 2.5rem 2rem;
+  max-width: 320px;
+  width: 100%;
+}
+
+.login-logo {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.3rem;
+}
+.login-logo span { color: var(--accent); }
+
+.login-sub {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 1.75rem;
+}
+
+.login-desc {
+  font-size: 0.72rem;
+  color: #9090b0;
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+#spotify-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #1db954;
+  color: #000;
+  border: none;
+  border-radius: 50px;
+  padding: 0.85rem 2rem;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#spotify-btn:hover { background: #1ed760; transform: scale(1.04); }
