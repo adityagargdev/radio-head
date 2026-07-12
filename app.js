@@ -52,6 +52,7 @@ async function startLogin() {
     redirect_uri: REDIRECT_URI,
     code_challenge_method: 'S256',
     code_challenge: challenge,
+    scope: 'user-read-private',
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
@@ -85,6 +86,12 @@ async function getToken() {
   const raw = localStorage.getItem('spotify_token');
   if (!raw) return null;
   const token = JSON.parse(raw);
+
+  // Re-login if token was granted without required scopes
+  if (!(token.scope || '').split(' ').includes('user-read-private')) {
+    localStorage.removeItem('spotify_token');
+    return null;
+  }
 
   // Still valid
   if (Date.now() < token.expires_at - 60_000) return token.access_token;
@@ -122,22 +129,22 @@ async function getTopTracks(countryName, cc) {
   const isTop50 = p => p?.name && CHART_OWNERS.has(p?.owner?.id) && p.name.toLowerCase().includes('top 50');
   const market  = cc ? `&market=${cc}` : '';
 
-  // Spotify names these "Top 50 - India" — search with the dash format first
-  const q1     = encodeURIComponent(`Top 50 - ${countryName}`);
-  const data1  = await spotifyFetch(`/search?q=${q1}&type=playlist&limit=50${market}`);
+  // Try 1: exact Spotify naming "Top 50 - {Country}"
+  const q1    = encodeURIComponent(`Top 50 - ${countryName}`);
+  const data1 = await spotifyFetch(`/search?q=${q1}&type=playlist&limit=50${market}`);
   let playlist = data1.playlists?.items?.find(isTop50);
 
-  // Fallback: broader search without dash
-  if (!playlist) {
-    const q2    = encodeURIComponent(`Top 50 ${countryName}`);
-    const data2 = await spotifyFetch(`/search?q=${q2}&type=playlist&limit=50${market}`);
-    playlist = data2.playlists?.items?.find(isTop50) ?? data2.playlists?.items?.[0];
+  // Try 2: search just "top 50" scoped to the market (finds local chart playlist directly)
+  if (!playlist && cc) {
+    const data2 = await spotifyFetch(`/search?q=top+50&type=playlist&limit=50&market=${cc}`);
+    playlist = data2.playlists?.items?.find(isTop50);
   }
 
-  // Last resort: country's featured playlists
-  if (!playlist && cc) {
-    const data3 = await spotifyFetch(`/browse/featured-playlists?country=${cc}&limit=50`);
-    playlist = data3.playlists?.items?.find(p => p?.name?.toLowerCase().includes('top 50'));
+  // Try 3: broad search without dash, accept any top result
+  if (!playlist) {
+    const q3    = encodeURIComponent(`Top 50 ${countryName}`);
+    const data3 = await spotifyFetch(`/search?q=${q3}&type=playlist&limit=50${market}`);
+    playlist = data3.playlists?.items?.find(isTop50) ?? data3.playlists?.items?.[0];
   }
 
   if (!playlist) throw new Error(`No Top 50 playlist found for ${countryName}`);
