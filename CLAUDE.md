@@ -1,10 +1,10 @@
 # radio_head — Project Documentation
 
 ## Overview
-A fun interactive web app: spin a 3D globe, stop it wherever you like, and hear live radio from that location.
-Built as a static site — no backend, no API keys, no build tools. Just open `index.html`.
+A fun interactive web app: spin a 3D globe, stop it wherever you like, and hear that country's Spotify Top 50 chart songs (30-second previews).
+Built as a static site — no backend, no build tools. Requires a Spotify account (PKCE OAuth). Just open `index.html`.
 
-**GitHub Pages ready.** Push to a repo and enable Pages to deploy instantly.
+**Live on GitHub Pages:** https://adityagargdev.github.io/radio-head/
 
 ## Project Structure
 ```
@@ -19,27 +19,26 @@ radio_head/
 | Layer | Tool |
 |---|---|
 | 3D Globe | [globe.gl](https://globe.gl/) via unpkg CDN (wraps Three.js) |
-| Radio stations | [Radio Browser API](https://www.radio-browser.info/) — free, no key |
-| Reverse geocoding | [Nominatim](https://nominatim.openstreetmap.org/) (OpenStreetMap) — free, no key |
+| Music | [Spotify Web API](https://developer.spotify.com/documentation/web-api) — Top 50 playlists, 30s `preview_url` |
+| Auth | Spotify PKCE OAuth (Authorization Code + PKCE) — no client secret needed |
+| Reverse geocoding | [BigDataCloud](https://www.bigdatacloud.com/geocoding-apis/free-reverse-geocode-to-city-api) — browser-safe, no key |
 | Fonts | Space Mono (Google Fonts) |
 | Framework | None — vanilla HTML/CSS/JS |
 
 ## Features
-- 3D interactive globe (drag to rotate, scroll to zoom)
-- Auto-rotation on load
+- Spotify login overlay on first visit (PKCE OAuth — no password stored, token in localStorage)
+- 3D interactive globe (drag to rotate, scroll to zoom), auto-rotates on load
 - **SPIN** button — animates globe to a random location
-- **TUNE IN** button — stops globe, reverse-geocodes center point, fetches radio stations from that country, starts playing
-- Equalizer visualizer (CSS animation) when playing
-- Prev / Play-Pause / Next station controls
-- Station count display (`3 / 18 stations`)
-- Genre tags shown per station
-- Country flag emoji derived from ISO 3166-1 country code
+- **TUNE IN** button — stops globe, reverse-geocodes center, searches Spotify for that country's Top 50 playlist, starts playing 30s previews
+- Album art, track name, artist, `#N of M this week` counter
+- Progress bar (fills as preview plays, resets on track change)
+- Prev / Play-Pause / Next controls
+- Auto-advance to next track when preview ends; auto-skip on stream error
+- Country flag emoji + country name in player header
 - Red dot marker placed on globe at the tuned location
 - Ripple animation on center crosshair when playing
 - Ocean detection — friendly message if you land on water
-- Auto-skips dead streams (tries next station on error)
-- Prefers HTTPS streams to avoid mixed-content issues on GitHub Pages
-- Fallback across 3 Radio Browser API servers
+- Token auto-refresh via Spotify refresh token (stays logged in across sessions)
 
 ## Setup & Running
 No install needed.
@@ -55,10 +54,13 @@ python -m http.server 8080
 ```
 
 ## Key Decisions & Notes
-- **HTTPS streams only**: `is_https=true` is sent to the Radio Browser API so only streams with HTTPS URLs are returned. This prevents mixed-content blocks on GitHub Pages. Means fewer stations for some countries, but zero silent playback failures.
-- **Nominatim User-Agent**: Browsers block setting `User-Agent` in JS fetch (forbidden header). Nominatim sees the browser's UA — acceptable for low-volume use.
-- **globe.gl pointOfView()**: Returns `{lat, lng, altitude}` of the camera — this IS the geographic center of what's visible, so it's used directly as the "tuned" location.
-- **Spin mechanic**: Uses `world.pointOfView({lat, lng}, duration)` which smoothly animates the camera arc to a random location — no manual physics needed.
+- **PKCE vs Client Credentials**: PKCE requires only `client_id` (no `client_secret`), making it safe to hardcode in a public GitHub repo. Users log in with their own Spotify account.
+- **No client secret in repo**: PKCE flow is entirely browser-side — `crypto.subtle` SHA-256 for the code challenge, `sessionStorage` for the verifier, `localStorage` for tokens.
+- **Spotify Top 50 search**: `/search?q=Top+50+{country}&type=playlist&limit=10` then find the result where `owner.id === 'spotify'` and name includes `'top 50'`. Falls back to first result if no official playlist found.
+- **Preview URLs only**: Spotify `preview_url` gives 30-second clips with no additional auth beyond the user token. Full tracks would require Spotify Premium + SDK.
+- **BigDataCloud geocoding**: `api.bigdatacloud.net/data/reverse-geocode-client` — browser-safe (no custom User-Agent required), returns `{countryCode, countryName}`. Replaced Nominatim which blocked all browser requests.
+- **globe.gl pointOfView()**: Returns `{lat, lng, altitude}` of the camera — this IS the geographic center of what's visible, used directly as the tuned location.
+- **Spin mechanic**: Uses `world.pointOfView({lat, lng, altitude}, duration)` to smoothly arc camera to random coordinates.
 
 ## Changelog
 | Date | Change |
@@ -67,3 +69,5 @@ python -m http.server 8080
 | 2026-07-12 | Added `is_https=true` to Radio Browser query — eliminates HTTP stream mixed-content failures |
 | 2026-07-13 | Fixed geocoding: Nominatim → BigDataCloud (Nominatim blocks browser requests without custom User-Agent) |
 | 2026-07-13 | Fixed Radio Browser API param: `countrycodeExact` (invalid, ignored by API) → `countrycode` |
+| 2026-07-13 | Pivoted from Radio Browser API (unreliable) → Spotify Top 50 charts + PKCE OAuth |
+| 2026-07-13 | Added Spotify client ID (`bd65e4f0...`) — app fully functional on GitHub Pages |
