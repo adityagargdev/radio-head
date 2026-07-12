@@ -117,14 +117,28 @@ async function spotifyFetch(path) {
   return r.json();
 }
 
-async function getTopTracks(countryName) {
-  // Find Spotify's official "Top 50 – <Country>" playlist
-  const q      = encodeURIComponent(`Top 50 ${countryName}`);
-  const search = await spotifyFetch(`/search?q=${q}&type=playlist&limit=10`);
+async function getTopTracks(countryName, cc) {
+  const CHART_OWNERS = new Set(['spotify', 'spotifycharts']);
+  const isTop50 = p => p?.name && CHART_OWNERS.has(p?.owner?.id) && p.name.toLowerCase().includes('top 50');
+  const market  = cc ? `&market=${cc}` : '';
 
-  const playlist = search.playlists?.items?.find(p =>
-    p?.owner?.id === 'spotify' && p?.name?.toLowerCase().includes('top 50')
-  ) ?? search.playlists?.items?.[0];
+  // Spotify names these "Top 50 - India" — search with the dash format first
+  const q1     = encodeURIComponent(`Top 50 - ${countryName}`);
+  const data1  = await spotifyFetch(`/search?q=${q1}&type=playlist&limit=50${market}`);
+  let playlist = data1.playlists?.items?.find(isTop50);
+
+  // Fallback: broader search without dash
+  if (!playlist) {
+    const q2    = encodeURIComponent(`Top 50 ${countryName}`);
+    const data2 = await spotifyFetch(`/search?q=${q2}&type=playlist&limit=50${market}`);
+    playlist = data2.playlists?.items?.find(isTop50) ?? data2.playlists?.items?.[0];
+  }
+
+  // Last resort: country's featured playlists
+  if (!playlist && cc) {
+    const data3 = await spotifyFetch(`/browse/featured-playlists?country=${cc}&limit=50`);
+    playlist = data3.playlists?.items?.find(p => p?.name?.toLowerCase().includes('top 50'));
+  }
 
   if (!playlist) throw new Error(`No Top 50 playlist found for ${countryName}`);
 
@@ -259,7 +273,7 @@ tuneBtn.addEventListener('click', async () => {
     }
 
     openPlayer(country, ccToFlag(cc));
-    tracks = await getTopTracks(country);
+    tracks = await getTopTracks(country, cc);
 
     if (!tracks.length) {
       trackNameEl.textContent = `No song previews available for ${country}`;
