@@ -26,7 +26,7 @@ async function getTopTracks(countryName, cc) {
 
   // Step 1: top songs RSS for this country (free, no auth)
   const rssRes = await fetch(
-    `https://itunes.apple.com/${c}/rss/topsongs/limit=50/json`
+    `/api/itunes/${c}/rss/topsongs/limit=50/json`
   );
   if (!rssRes.ok) throw new Error(`No chart data available for ${countryName}`);
   const rssData = await rssRes.json();
@@ -40,7 +40,7 @@ async function getTopTracks(countryName, cc) {
 
   // Step 2: batch lookup to get preview URLs (one request for all 50 tracks)
   const lookupRes = await fetch(
-    `https://itunes.apple.com/lookup?id=${ids.join(',')}&country=${c}&limit=200`
+    `/api/itunes/lookup?id=${ids.join(',')}&country=${c}&limit=200`
   );
   if (!lookupRes.ok) throw new Error(`Could not load track details for ${countryName}`);
   const lookupData = await lookupRes.json();
