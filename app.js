@@ -1,165 +1,69 @@
-// ── Config ───────────────────────────────────────────────────────────────────
-const CLIENT_ID   = 'bd65e4f0189e4d088ee7f4931541d406';
-const REDIRECT_URI = window.location.origin
-  + window.location.pathname.replace(/([^/])$/, '$1/'); // ensures trailing slash
-
 // ── DOM ──────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const audio        = $('audio');
-const tuneBtn      = $('tune-btn');
-const spinBtn      = $('spin-btn');
-const player       = $('player');
-const playpause    = $('playpause');
-const prevBtn      = $('prev');
-const nextBtn      = $('next');
-const closeBtn     = $('close-btn');
-const trackNameEl  = $('track-name');
-const artistEl     = $('artist-name');
-const albumArtEl   = $('album-art');
-const countryEl    = $('country');
-const flagEl       = $('flag');
-const countEl      = $('count');
-const progressBar  = $('progress-bar');
-const loginOverlay = $('login-overlay');
-const spotifyBtn   = $('spotify-btn');
-const ci           = $('ci');
+const audio       = $('audio');
+const tuneBtn     = $('tune-btn');
+const spinBtn     = $('spin-btn');
+const player      = $('player');
+const playpause   = $('playpause');
+const prevBtn     = $('prev');
+const nextBtn     = $('next');
+const closeBtn    = $('close-btn');
+const trackNameEl = $('track-name');
+const artistEl    = $('artist-name');
+const albumArtEl  = $('album-art');
+const countryEl   = $('country');
+const flagEl      = $('flag');
+const countEl     = $('count');
+const progressBar = $('progress-bar');
+const ci          = $('ci');
 
-// ── State ────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 let tracks = [], currentIdx = 0, isBusy = false;
 
-// ── PKCE helpers ─────────────────────────────────────────────────────────────
-function makeVerifier(len = 128) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  return [...crypto.getRandomValues(new Uint8Array(len))]
-    .map(b => chars[b % chars.length]).join('');
-}
-
-async function makeChallenge(verifier) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-// ── Auth ─────────────────────────────────────────────────────────────────────
-async function startLogin() {
-  const verifier  = makeVerifier();
-  const challenge = await makeChallenge(verifier);
-  sessionStorage.setItem('pkce_verifier', verifier);
-
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: REDIRECT_URI,
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-    scope: 'user-read-private',
-  });
-  window.location.href = `https://accounts.spotify.com/authorize?${params}`;
-}
-
-async function exchangeCode(code) {
-  const r = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: REDIRECT_URI,
-      code_verifier: sessionStorage.getItem('pkce_verifier'),
-    }),
-  });
-  const data = await r.json();
-  if (!data.access_token) throw new Error('Token exchange failed');
-  storeToken(data);
-  sessionStorage.removeItem('pkce_verifier');
-}
-
-function storeToken(data) {
-  localStorage.setItem('spotify_token', JSON.stringify({
-    ...data,
-    expires_at: Date.now() + data.expires_in * 1000,
-  }));
-}
-
-async function getToken() {
-  const raw = localStorage.getItem('spotify_token');
-  if (!raw) return null;
-  const token = JSON.parse(raw);
-
-  // Re-login if token was granted without required scopes
-  if (!(token.scope || '').split(' ').includes('user-read-private')) {
-    localStorage.removeItem('spotify_token');
-    return null;
-  }
-
-  // Still valid
-  if (Date.now() < token.expires_at - 60_000) return token.access_token;
-
-  // Refresh
-  if (!token.refresh_token) { localStorage.removeItem('spotify_token'); return null; }
-
-  const r = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: 'refresh_token',
-      refresh_token: token.refresh_token,
-    }),
-  });
-  const data = await r.json();
-  if (!data.access_token) { localStorage.removeItem('spotify_token'); return null; }
-  storeToken({ ...token, ...data });
-  return data.access_token;
-}
-
-// ── Spotify API ───────────────────────────────────────────────────────────────
-async function spotifyFetch(path) {
-  const token = await getToken();
-  const r = await fetch(`https://api.spotify.com/v1${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!r.ok) throw new Error(`Spotify API ${r.status}`);
-  return r.json();
-}
-
+// ── Charts — iTunes RSS ───────────────────────────────────────────────────────
 async function getTopTracks(countryName, cc) {
-  const CHART_OWNERS = new Set(['spotify', 'spotifycharts']);
-  const isTop50 = p => p?.name && CHART_OWNERS.has(p?.owner?.id) && p.name.toLowerCase().includes('top 50');
-  const market  = cc ? `&market=${cc}` : '';
+  const c = cc.toLowerCase();
 
-  // Try 1: exact Spotify naming "Top 50 - {Country}"
-  const q1    = encodeURIComponent(`Top 50 - ${countryName}`);
-  const data1 = await spotifyFetch(`/search?q=${q1}&type=playlist&limit=50${market}`);
-  let playlist = data1.playlists?.items?.find(isTop50);
-
-  // Try 2: search just "top 50" scoped to the market (finds local chart playlist directly)
-  if (!playlist && cc) {
-    const data2 = await spotifyFetch(`/search?q=top+50&type=playlist&limit=50&market=${cc}`);
-    playlist = data2.playlists?.items?.find(isTop50);
-  }
-
-  // Try 3: broad search without dash, accept any top result
-  if (!playlist) {
-    const q3    = encodeURIComponent(`Top 50 ${countryName}`);
-    const data3 = await spotifyFetch(`/search?q=${q3}&type=playlist&limit=50${market}`);
-    playlist = data3.playlists?.items?.find(isTop50) ?? data3.playlists?.items?.[0];
-  }
-
-  if (!playlist) throw new Error(`No Top 50 playlist found for ${countryName}`);
-
-  const result = await spotifyFetch(
-    `/playlists/${playlist.id}/tracks?limit=30` +
-    `&fields=items(track(name,artists(name),album(images),preview_url,external_urls))`
+  // Step 1: top songs RSS for this country (free, no auth)
+  const rssRes = await fetch(
+    `https://itunes.apple.com/${c}/rss/topsongs/limit=50/json`
   );
+  if (!rssRes.ok) throw new Error(`No chart data available for ${countryName}`);
+  const rssData = await rssRes.json();
 
-  return result.items
-    .map(i => i.track)
-    .filter(t => t?.name && t?.preview_url); // only tracks with a 30s preview
+  const entries = rssData.feed?.entry;
+  if (!entries?.length) throw new Error(`No chart data available for ${countryName}`);
+
+  // Extract track IDs
+  const ids = entries.map(e => e.id?.attributes?.['im:id']).filter(Boolean);
+  if (!ids.length) throw new Error(`No tracks found for ${countryName}`);
+
+  // Step 2: batch lookup to get preview URLs (one request for all 50 tracks)
+  const lookupRes = await fetch(
+    `https://itunes.apple.com/lookup?id=${ids.join(',')}&country=${c}&limit=200`
+  );
+  if (!lookupRes.ok) throw new Error(`Could not load track details for ${countryName}`);
+  const lookupData = await lookupRes.json();
+
+  // Map trackId → metadata
+  const byId = {};
+  lookupData.results?.forEach(r => { if (r.trackId) byId[r.trackId] = r; });
+
+  // Merge RSS chart order with lookup metadata, keep only tracks with previews
+  return entries.map(e => {
+    const id   = e.id?.attributes?.['im:id'];
+    const info = byId[id];
+    if (!info?.previewUrl) return null;
+    return {
+      name:        e['im:name']?.label  ?? info.trackName,
+      artists:     [{ name: e['im:artist']?.label ?? info.artistName }],
+      album:       { images: [{ url: e['im:image']?.[2]?.label ?? info.artworkUrl100 }] },
+      preview_url: info.previewUrl,
+    };
+  }).filter(Boolean);
 }
 
-// ── Geocoding ────────────────────────────────────────────────────────────────
+// ── Geocoding ─────────────────────────────────────────────────────────────────
 async function reverseGeocode(lat, lng) {
   const r = await fetch(
     `https://api.bigdatacloud.net/data/reverse-geocode-client` +
@@ -174,7 +78,7 @@ function ccToFlag(cc) {
     .map(c => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join('');
 }
 
-// ── Globe ────────────────────────────────────────────────────────────────────
+// ── Globe ─────────────────────────────────────────────────────────────────────
 const world = Globe()
   .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
   .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
@@ -187,15 +91,15 @@ const world = Globe()
   .pointRadius(0.4)
   ($('globe-container'));
 
-world.controls().autoRotate    = true;
+world.controls().autoRotate     = true;
 world.controls().autoRotateSpeed = 0.6;
-world.controls().enableDamping = true;
+world.controls().enableDamping  = true;
 
 window.addEventListener('resize', () =>
   world.width(window.innerWidth).height(window.innerHeight)
 );
 
-// ── Playback ─────────────────────────────────────────────────────────────────
+// ── Playback ──────────────────────────────────────────────────────────────────
 function setPlaying(on) { playpause.textContent = on ? '⏸' : '▶'; }
 
 function playTrack(i) {
@@ -208,7 +112,7 @@ function playTrack(i) {
 
   trackNameEl.textContent = t.name;
   artistEl.textContent    = t.artists?.map(a => a.name).join(', ') ?? '';
-  albumArtEl.src          = t.album?.images?.[1]?.url ?? t.album?.images?.[0]?.url ?? '';
+  albumArtEl.src          = t.album?.images?.[0]?.url ?? '';
   countEl.textContent     = `#${currentIdx + 1} of ${tracks.length} this week`;
   progressBar.style.width = '0%';
   setPlaying(true);
@@ -225,7 +129,7 @@ function openPlayer(country, flag) {
   progressBar.style.width = '0%';
 
   player.classList.remove('hidden', 'open');
-  void player.offsetWidth; // force reflow so animation replays
+  void player.offsetWidth;
   player.classList.add('open');
   ci.classList.add('tuned');
 }
@@ -247,7 +151,6 @@ audio.addEventListener('timeupdate', () => {
     progressBar.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
 });
 
-// auto-advance to next track when preview ends
 audio.addEventListener('ended', () => {
   if (currentIdx < tracks.length - 1) playTrack(currentIdx + 1);
 });
@@ -284,7 +187,7 @@ tuneBtn.addEventListener('click', async () => {
 
     if (!tracks.length) {
       trackNameEl.textContent = `No song previews available for ${country}`;
-      countEl.textContent = 'Spotify may not have a Top 50 here';
+      countEl.textContent     = 'iTunes may not have a Top 50 here yet';
       return;
     }
 
@@ -319,24 +222,3 @@ playpause.addEventListener('click', () => { if (audio.paused) audio.play(); else
 prevBtn.addEventListener('click',   () => playTrack(currentIdx - 1));
 nextBtn.addEventListener('click',   () => playTrack(currentIdx + 1));
 closeBtn.addEventListener('click',  closePlayer);
-spotifyBtn.addEventListener('click', startLogin);
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-async function init() {
-  // Handle OAuth callback
-  const params = new URLSearchParams(window.location.search);
-  const code   = params.get('code');
-
-  if (code) {
-    history.replaceState({}, '', window.location.pathname);
-    try { await exchangeCode(code); } catch { /* show login */ }
-  }
-
-  // Show globe or login
-  if (await getToken()) {
-    loginOverlay.classList.add('hidden');
-  }
-  // login overlay is visible by default (not hidden) so nothing else needed
-}
-
-init();
