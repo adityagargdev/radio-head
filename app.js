@@ -1,5 +1,5 @@
 // ── Config ───────────────────────────────────────────────────────────────────
-const CLIENT_ID   = 'YOUR_SPOTIFY_CLIENT_ID'; // <-- fill this in
+const CLIENT_ID   = 'bd65e4f0189e4d088ee7f4931541d406';
 const REDIRECT_URI = window.location.origin
   + window.location.pathname.replace(/([^/])$/, '$1/'); // ensures trailing slash
 
