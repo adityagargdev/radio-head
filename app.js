@@ -69,7 +69,7 @@ async function radioFetch(path) {
 
 async function getStations(countryCode) {
   return radioFetch(
-    `/stations/search?countrycodeExact=${countryCode}&limit=30&order=clickcount&reverse=true&hidebroken=true&is_https=true`
+    `/stations/search?countrycode=${countryCode}&limit=30&order=clickcount&reverse=true&hidebroken=true&is_https=true`
   );
 }
 
