@@ -78,6 +78,26 @@ function ccToFlag(cc) {
     .map(c => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join('');
 }
 
+// ── Geo helpers ───────────────────────────────────────────────────────────────
+function geoBbox(feature) {
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  const visit = ([lon, lat]) => {
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  };
+  const { type, coordinates } = feature.geometry;
+  if (type === 'Polygon')      coordinates.forEach(r => r.forEach(visit));
+  if (type === 'MultiPolygon') coordinates.forEach(p => p.forEach(r => r.forEach(visit)));
+  return minLon === Infinity ? null : { minLon, maxLon, minLat, maxLat };
+}
+
+function geoCentroid(feature) {
+  const b = geoBbox(feature);
+  return b ? { lat: (b.minLat + b.maxLat) / 2, lng: (b.minLon + b.maxLon) / 2 } : { lat: 0, lng: 0 };
+}
+
 // ── Globe ─────────────────────────────────────────────────────────────────────
 const world = Globe()
   .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -98,6 +118,46 @@ world.controls().enableDamping  = true;
 window.addEventListener('resize', () =>
   world.width(window.innerWidth).height(window.innerHeight)
 );
+
+// ── Political overlay — country borders + names ───────────────────────────────
+fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson')
+  .then(r => r.json())
+  .then(({ features }) => {
+    let hovered = null;
+
+    world
+      .polygonsData(features)
+      .polygonAltitude(d => d === hovered ? 0.012 : 0.006)
+      .polygonCapColor(d => d === hovered ? 'rgba(0,212,255,0.18)' : 'rgba(10,10,40,0.22)')
+      .polygonSideColor(() => 'rgba(0,0,0,0)')
+      .polygonStrokeColor(() => 'rgba(0,212,255,0.45)')
+      .polygonLabel(({ properties: d }) =>
+        `<div style="font-family:'Space Mono',monospace;background:rgba(6,6,20,0.88);` +
+        `border:1px solid rgba(0,212,255,0.4);border-radius:6px;padding:4px 10px;` +
+        `color:#00d4ff;font-size:11px;letter-spacing:0.1em;">${d.name}</div>`
+      )
+      .onPolygonHover(poly => {
+        hovered = poly;
+        world
+          .polygonAltitude(d => d === hovered ? 0.012 : 0.006)
+          .polygonCapColor(d => d === hovered ? 'rgba(0,212,255,0.18)' : 'rgba(10,10,40,0.22)');
+      });
+
+    // Country name labels — only countries large enough to be readable at default zoom
+    const labeled = features.filter(f => {
+      const b = geoBbox(f);
+      return b && (b.maxLon - b.minLon) * (b.maxLat - b.minLat) > 8;
+    });
+
+    world
+      .labelsData(labeled.map(f => ({ ...geoCentroid(f), text: f.properties.name })))
+      .labelText('text')
+      .labelSize(0.45)
+      .labelColor(() => 'rgba(220,220,255,0.75)')
+      .labelDotRadius(0)
+      .labelResolution(2);
+  })
+  .catch(() => {}); // political overlay is cosmetic — silently ignore failures
 
 // ── Playback ──────────────────────────────────────────────────────────────────
 function setPlaying(on) { playpause.textContent = on ? '⏸' : '▶'; }
